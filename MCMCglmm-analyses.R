@@ -4,32 +4,23 @@
 # University of Canterbury
 #
 
+# Changing default conversion of strings to factors
+# (source of extreme pain when debugging)
+options(stringsAsFactors = FALSE)
+
+# Loading MCMCglmm for Bayesian analyses
 library(MCMCglmm)
-
-#### Setting Working directory
-# This directory has to be changed to reflect
-# the location of the files in your computer
-setwd('~/Documents/Research/2012/amberley/')
-
-# Read data file
-amber <- read.csv('data20091016.csv', header = TRUE)
-amber$Block <- factor(amber$Block)
-amber$tree.id <- factor(10001:(10000+dim(amber)[1]))
-head(amber)
-
-# Read pedigree file
-ped <- read.csv('pedigree.csv', header = TRUE)
-head(ped)
 
 # Rename tree.id to animal so we can use MCMCglmm
 names(amber)[14] <- 'animal'
-names(ped)[1] <- 'animal'
+names(pedigree)[1] <- 'animal'
 
 ## Example for univariate analyses
 #
 # ngvel (normal green velocity)
 #
 
+# Priors for residuals, animal and block effects
 prior = list(R = list(V = 0.007, n = 0),
              G = list(G1 = list(V = 0.002, n = 0), G2 = list(V = 0.001, n = 0)))
 
@@ -38,7 +29,7 @@ ngvel.u <-  MCMCglmm(ngvel ~ 1,
                      random = ~ animal + Block, 
                      family = 'gaussian',
                      data = amber,
-                     pedigree = ped,
+                     pedigree = pedigree,
                      prior = prior,
                      verbose = FALSE,
                      pr = TRUE,
@@ -46,17 +37,19 @@ ngvel.u <-  MCMCglmm(ngvel ~ 1,
                      nitt = 200000,
                      thin = 200)
 
-plot(mcmc.list(nvel.bayes$VCV))
+plot(mcmc.list(ngvel.u$VCV))
 
 # Heritability for normal velocity
-h2.nvel <- nvel.bayes$VCV[, 'animal']/(nvel.bayes$VCV[, 'animal'] + nvel.bayes$VCV[, 'Block'] + nvel.bayes$VCV[, 'units'])
-posterior.mode(h2.nvel)
+h2.ngvel <- ngvel.u$VCV[, 'animal']/(ngvel.u$VCV[, 'animal'] + ngvel.u$VCV[, 'Block'] + ngvel.u$VCV[, 'units'])
+posterior.mode(h2.ngvel)
 # 0.196
 
-HPDinterval(h2.nvel)
+HPDinterval(h2.ngvel)
 # 0.047 0.457
 
-autocorr(nvel.bayes$VCV)
-plot(h2.nvel)
+plot(h2.ngvel)
+
+autocorr(ngvel.u$VCV)
+
 
 
